@@ -4,6 +4,15 @@ import { contactSchema } from "@/lib/contact-schema";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 import { mailerConfigured, sendLeadEmail } from "@/lib/mailer";
 
+/**
+ * NOTE: this file is `route.node.ts`, not `route.ts`.
+ *
+ * `pageExtensions` in next.config.ts includes "node.ts" only for server
+ * builds. A static export drops it from the list, so this handler is simply
+ * not part of that build — which is what lets the same tree deploy to both a
+ * Node host and GitHub Pages. Renaming it back to `route.ts` will break the
+ * static export with "route handlers cannot be used with output: export".
+ */
 export const runtime = "nodejs";
 /** Never cached: every POST is a distinct lead. */
 export const dynamic = "force-dynamic";

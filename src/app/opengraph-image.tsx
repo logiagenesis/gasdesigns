@@ -3,6 +3,8 @@ import { ImageResponse } from "next/og";
 import { BRAND_LOCKUP, SITE_META } from "@/lib/site-config";
 
 export const runtime = "nodejs";
+/** Required for `output: export`: renders the card once at build time. */
+export const dynamic = "force-static";
 export const alt = `${SITE_META.name} — ${SITE_META.tagline}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";

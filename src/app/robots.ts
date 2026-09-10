@@ -1,5 +1,8 @@
 import type { MetadataRoute } from "next";
 
+/** Required for `output: export`: pins this route to build-time generation. */
+export const dynamic = "force-static";
+
 import { SITE_URL } from "@/lib/site-config";
 
 export default function robots(): MetadataRoute.Robots {

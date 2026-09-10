@@ -16,9 +16,12 @@ npm run dev                    # http://localhost:3000
 ```
 
 ```bash
-npm run check      # lint + typecheck + build
+npm run check          # lint + typecheck + build
 npm run build && npm run start
-npm test           # Playwright smoke tests against a production build
+npm test               # Playwright smoke tests against a production build
+
+npm run build:static   # static export for GitHub Pages → out/
+npm run serve:static   # serve out/ locally
 ```
 
 Playwright needs a browser once: `npx playwright install chromium`.
@@ -38,6 +41,7 @@ On a machine that already has one, set `PLAYWRIGHT_CHROMIUM_PATH` instead.
 | [`docs/competitor-audit.md`](docs/competitor-audit.md) | Real market research, September 2026 |
 | [`docs/content-strategy.md`](docs/content-strategy.md) | Content gaps, ranked |
 | [`docs/design-opportunities.md`](docs/design-opportunities.md) | Where this site can pull ahead |
+| [`docs/deployment.md`](docs/deployment.md) | Node host vs GitHub Pages, and what the static target gives up |
 
 ---
 
@@ -114,11 +118,31 @@ designed so only that file changes.
 **Never hard-code a colour.** If it is not a token in `globals.css`, it does not
 belong in the design.
 
+**`src/app/api/contact/route.node.ts` is named that way on purpose.**
+`pageExtensions` only treats `node.ts` as a route extension on the Node target,
+which is what keeps this POST handler out of the static export. Rename it to
+`route.ts` and `npm run build:static` fails.
+
+**`public/.nojekyll` is an empty file and load-bearing.** GitHub Pages runs
+Jekyll, which drops directories starting with an underscore — without it,
+`_next/` vanishes and the site deploys with no CSS or JavaScript.
+
 ---
 
 ## Deploying
 
-Any Node host that runs Next 15. Vercel needs no configuration.
+Two targets — see [`docs/deployment.md`](docs/deployment.md) for the full
+picture, including what the static target gives up.
+
+**GitHub Pages** (`.github/workflows/deploy-pages.yml`, on push to `main`)
+publishes to https://logiagenesis.github.io/gasdesigns. Requires
+Settings → Pages → Source → "GitHub Actions" once. It has no server, so the
+enquiry form posts to an external service via the `NEXT_PUBLIC_FORM_ENDPOINT`
+secret — and shows a visible "not connected" notice if that is unset. **A
+static host serves no custom headers, so the CSP and HSTS below do not apply
+there.**
+
+**Node host** — any host that runs Next 15. Vercel needs no configuration.
 
 1. Set `NEXT_PUBLIC_SITE_URL` to the production origin — canonicals, OG tags,
    the sitemap and robots all derive from it.
@@ -137,12 +161,12 @@ do not conflict.
 
 ## Verified, not assumed
 
-| | Desktop | Mobile (4× CPU throttle, slow 4G) |
-|---|---|---|
-| Lighthouse Performance | 100 | 95–96 |
-| Accessibility | 100 | 100 |
-| Best Practices | 100 | 100 |
-| SEO | 100 | 100 |
+| | Desktop | Mobile (4× CPU throttle, slow 4G) | Static export |
+|---|---|---|---|
+| Lighthouse Performance | 100 | 95–96 | 99 |
+| Accessibility | 100 | 100 | 100 |
+| Best Practices | 100 | 100 | 100 |
+| SEO | 100 | 100 | 100 |
 
 - axe-core: **0 violations**, WCAG 2.0/2.1 A and AA, across all 7 page types.
 - Playwright: **50 tests passing**.

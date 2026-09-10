@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -12,6 +13,23 @@ import {
   contactSchema,
   type ContactInput,
 } from "@/lib/contact-schema";
+import { EMAIL, mailtoHref } from "@/lib/site-config";
+
+/**
+ * Where the enquiry posts.
+ *
+ * On a Node host this is our own API route, which validates server-side,
+ * rate limits and sends over SMTP. A static export (GitHub Pages) has no
+ * server, so it posts to an external form service instead — set
+ * NEXT_PUBLIC_FORM_ENDPOINT to a Formspree / Web3Forms / Basin URL.
+ *
+ * If neither is available the form does not pretend to work: it says so and
+ * points at the email address. A form that silently swallows enquiries is
+ * worse than no form.
+ */
+const EXTERNAL_ENDPOINT = (process.env.NEXT_PUBLIC_FORM_ENDPOINT ?? "").trim();
+const IS_STATIC_EXPORT = process.env.NEXT_PUBLIC_STATIC_EXPORT === "true";
+const ENDPOINT = EXTERNAL_ENDPOINT || (IS_STATIC_EXPORT ? "" : "/api/contact");
 
 type Status =
   | { kind: "idle" }
@@ -74,18 +92,29 @@ export function ContactForm() {
     async (values) => {
       setStatus({ kind: "sending" });
       try {
-        const response = await fetch("/api/contact", {
+        const response = await fetch(ENDPOINT, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            // Formspree and Basin return JSON rather than a redirect for this.
+            Accept: "application/json",
+          },
           body: JSON.stringify(values),
         });
         const result = (await response.json().catch(() => ({}))) as {
           ok?: boolean;
+          success?: boolean;
           error?: string;
           fieldErrors?: Record<string, string>;
         };
 
-        if (!response.ok || !result.ok) {
+        // Our own API answers { ok: true }. External services vary — some
+        // return { success: true }, some only a 200 — so a 2xx is enough there.
+        const delivered = EXTERNAL_ENDPOINT
+          ? response.ok
+          : response.ok && result.ok === true;
+
+        if (!delivered) {
           // Surface server-side field errors against the right inputs.
           if (result.fieldErrors) {
             for (const [field, message] of Object.entries(result.fieldErrors)) {
@@ -118,6 +147,7 @@ export function ContactForm() {
   );
 
   const busy = isSubmitting || status.kind === "sending";
+  const disabled = busy || !ENDPOINT;
   const err = (field: keyof ContactInput) => errors[field]?.message;
   const invalid = (field: keyof ContactInput) =>
     errors[field] ? "true" : undefined;
@@ -131,6 +161,22 @@ export function ContactForm() {
       onFocusCapture={onFirstInteraction}
       noValidate
     >
+      {!ENDPOINT && (
+        <p
+          className="form-status form-status-warn"
+          role="status"
+          style={{ marginBottom: 22 }}
+        >
+          <strong>This form is not connected yet.</strong> This build has no
+          submission endpoint configured, so nothing sent here would reach
+          anyone. Email{" "}
+          <a href={mailtoHref()} style={{ color: "inherit", fontWeight: 600 }}>
+            {EMAIL.value}
+          </a>{" "}
+          instead and we will pick it up.
+        </p>
+      )}
+
       <div className="form-grid">
         <div className="field">
           <label className="field-label" htmlFor="name">
@@ -356,12 +402,12 @@ export function ContactForm() {
             <label htmlFor="consent" className="t-small" style={{ margin: 0 }}>
               I agree that Gas Designs may use these details to respond to this
               enquiry, as described in the{" "}
-              <a
+              <Link
                 href="/privacy-policy"
                 style={{ color: "var(--ion-cyan)", textDecoration: "underline" }}
               >
                 privacy policy
-              </a>
+              </Link>
               .
             </label>
           </div>
@@ -379,7 +425,7 @@ export function ContactForm() {
         )}
 
         <div className="form-submit-row">
-          <button type="submit" className="btn btn-primary" disabled={busy}>
+          <button type="submit" className="btn btn-primary" disabled={disabled}>
             {busy ? "Sending…" : "Send enquiry"}
           </button>
           <p className="t-small" style={{ margin: 0 }}>

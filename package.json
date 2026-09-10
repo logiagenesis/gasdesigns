@@ -10,7 +10,9 @@
     "typecheck": "tsc --noEmit",
     "test": "playwright test",
     "test:headed": "playwright test --headed",
-    "check": "npm run lint && npm run typecheck && npm run build"
+    "check": "npm run lint && npm run typecheck && npm run build",
+    "build:static": "NEXT_OUTPUT=export NEXT_PUBLIC_STATIC_EXPORT=true next build",
+    "serve:static": "npx --yes serve@14 out -l 3000"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

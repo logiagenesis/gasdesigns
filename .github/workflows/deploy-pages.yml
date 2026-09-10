@@ -1,0 +1,109 @@
+name: Deploy to GitHub Pages
+
+# Builds the static export and publishes it to GitHub Pages.
+#
+# One-time setup in the repository: Settings → Pages → Build and deployment →
+# Source → "GitHub Actions". Without that this workflow builds but cannot
+# publish.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# GITHUB_TOKEN needs these to publish a Pages deployment.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deployments race. In-flight runs finish rather than being
+# cancelled, so a deploy is not left half-applied.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  # ---------------------------------------------------------------------
+  # Moving to a custom domain (e.g. gasdesigns.co.za)? Change these two,
+  # add a CNAME file to public/, and point DNS at GitHub.
+  #   BASE_PATH: ""   (site sits at the root, so no prefix)
+  #   SITE_URL:  "https://www.gasdesigns.co.za"
+  # ---------------------------------------------------------------------
+  BASE_PATH: "/gasdesigns"
+  SITE_URL: "https://logiagenesis.github.io/gasdesigns"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Cheap gates. A broken build should fail here, not halfway through a
+      # deployment.
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build static export
+        env:
+          NEXT_PUBLIC_BASE_PATH: ${{ env.BASE_PATH }}
+          NEXT_PUBLIC_SITE_URL: ${{ env.SITE_URL }}
+          # Static hosting has no API route, so the enquiry form posts to an
+          # external form service. Set this as a repository secret
+          # (Settings → Secrets and variables → Actions). Left unset, the form
+          # renders a visible "not connected" notice rather than silently
+          # dropping enquiries.
+          NEXT_PUBLIC_FORM_ENDPOINT: ${{ secrets.NEXT_PUBLIC_FORM_ENDPOINT }}
+          NEXT_PUBLIC_GTM_ID: ${{ secrets.NEXT_PUBLIC_GTM_ID }}
+          NEXT_PUBLIC_GA_ID: ${{ secrets.NEXT_PUBLIC_GA_ID }}
+        run: npm run build:static
+
+      # Belt and braces: `public/.nojekyll` already produces this, but if it
+      # ever goes missing Jekyll silently drops every `_next/` asset and the
+      # site deploys with no CSS or JS.
+      - name: Ensure .nojekyll
+        run: touch out/.nojekyll
+
+      - name: Verify the export looks sane
+        run: |
+          set -e
+          test -f out/index.html            || { echo "::error::no index.html"; exit 1; }
+          test -f out/404.html              || { echo "::error::no 404.html"; exit 1; }
+          test -f out/sitemap.xml           || { echo "::error::no sitemap.xml"; exit 1; }
+          test -f out/robots.txt            || { echo "::error::no robots.txt"; exit 1; }
+          test -f out/.nojekyll             || { echo "::error::no .nojekyll"; exit 1; }
+          test -d out/_next/static          || { echo "::error::no built assets"; exit 1; }
+          # Nine service pages, every time. The 3x3 grid contract depends on it.
+          count=$(find out/services -mindepth 1 -maxdepth 1 -type d | wc -l)
+          test "$count" -eq 9 || { echo "::error::expected 9 service pages, found $count"; exit 1; }
+          # Assets must carry the base path, or the site deploys unstyled.
+          if [ -n "${BASE_PATH}" ]; then
+            grep -q "${BASE_PATH}/_next/static" out/index.html \
+              || { echo "::error::basePath ${BASE_PATH} missing from asset URLs"; exit 1; }
+          fi
+          echo "Export verified: $(find out -type f | wc -l) files"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
