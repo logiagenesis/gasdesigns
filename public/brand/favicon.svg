@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Gas Designs">
+  <title>Gas Designs</title>
+  <rect width="64" height="64" rx="14" fill="#05070A"/>
+  <g transform="translate(32 32) scale(.84) translate(-32 -31.5)">
+  <defs>
+    <linearGradient id="gdFVChrome" x1="12" y1="14" x2="52" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset=".45" stop-color="#C3D1E1"/>
+      <stop offset="1" stop-color="#7C8DA1"/>
+    </linearGradient>
+    <linearGradient id="gdFVFlame" x1="0" y1="-21" x2="0" y2="1" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F59E0B"/>
+      <stop offset="1" stop-color="#FF6B35"/>
+    </linearGradient>
+  </defs>
+  <!-- Pipe ring with an open burner port. The cyan take-off line closes the G. -->
+  <path d="M49.6 32.9A18 18 0 1 1 30.4 18.86" fill="none" stroke="url(#gdFVChrome)" stroke-width="9.5" stroke-linecap="round"/>
+  <path d="M46.2 36.72H34" fill="none" stroke="#00AEEF" stroke-width="9.5" stroke-linecap="round"/>
+  <!-- Flame at the port. The cyan core reads as complete combustion. -->
+  <g transform="translate(40.5 21.5) scale(.8)">
+    <path d="M3 -20.5C2.6 -15 6.6 -12.4 7.2 -8 7.8 -3.2 4.4 0.4 0 0.4 -4.4 0.4 -7.4 -3.2 -7 -7.8 -6.6 -12.4 -2 -14.2 -0.6 -19 0 -21.2 3.2 -22.4 3 -20.5Z" fill="url(#gdFVFlame)"/>
+    <path d="M0.6 -10.6C2.4 -7.8 3.4 -6 3.4 -4.2 3.4 -1.6 1.9 0.2 0 0.2 -1.9 0.2 -3.4 -1.6 -3.4 -4.2 -3.4 -6.4 -1.6 -8 0.6 -10.6Z" fill="#6EE7F9"/>
+  </g>
+  </g>
+</svg>
